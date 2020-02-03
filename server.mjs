@@ -2,21 +2,27 @@
 // where your node app starts
 
 // init project
+import dns from 'dns';
 import express from 'express';
 import cors from 'cors';
+import mongoose from 'mongoose';
+import bodyParser from 'body-parser';
+import dotenv from 'dotenv';
 import { gDirname } from './utils/utilityFunctions.mjs';
+
+dotenv.config();
 
 const app = express();
 
 /** this project needs a db !! * */
-// mongoose.connect(process.env.MONGOLAB_URI);
+mongoose.connect(process.env.MONGOLAB_URI, { useNewUrlParser: true, useUnifiedTopology: true });
 
 // enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
 // so that your API is remotely testable by FCC
 app.use(cors({ optionSuccessStatus: 200 })); // some legacy browsers choke on 204
 
 /** this project needs to parse POST bodies * */
-// you should mount the body-parser here
+app.use(bodyParser.urlencoded({ extended: false }));
 
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
@@ -29,6 +35,26 @@ app.get('/', (req, res) => {
 // your first API endpoint...
 app.get('/api/hello', (req, res) => {
   res.json({ greeting: 'hello API' });
+});
+
+app.post('/api/shorturl/new', (req, res) => {
+  if (req.body.url.match(/^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/)) {
+    const startUrl = req.body.url.indexOf('://') + 3;
+    const endUrl = req.body.url.indexOf('/', startUrl);
+    const shortUrl = req.body.url.substring(startUrl, endUrl);
+
+    dns.lookup(shortUrl, err => {
+      if (err) {
+        res.json({ error: 'invalid URL' });
+      } else {
+        const urlNumber = 0; // TODO Database
+
+        res.json({ original_url: req.body.url, short_url: urlNumber });
+      }
+    });
+  } else {
+    res.json({ error: 'invalid URL' });
+  }
 });
 
 // listen for requests :)
