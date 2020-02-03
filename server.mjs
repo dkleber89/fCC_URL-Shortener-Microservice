@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import { gDirname } from './utils/utilityFunctions.mjs';
+import DatabaseWorker from './utils/DatabaseWorker.mjs';
 
 dotenv.config();
 
@@ -37,23 +38,30 @@ app.get('/api/hello', (req, res) => {
   res.json({ greeting: 'hello API' });
 });
 
+const databaseWorker = new DatabaseWorker(mongoose);
+
 app.post('/api/shorturl/new', (req, res) => {
   if (req.body.url.match(/^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/)) {
     const startUrl = req.body.url.indexOf('://') + 3;
     const endUrl = req.body.url.indexOf('/', startUrl);
-    const shortUrl = req.body.url.substring(startUrl, endUrl);
+    const shortUrl = req.body.url.substring(startUrl, endUrl > startUrl ? endUrl : undefined);
 
     dns.lookup(shortUrl, err => {
       if (err) {
         res.json({ error: 'invalid URL' });
       } else {
-        const urlNumber = 0; // TODO Database
-
-        res.json({ original_url: req.body.url, short_url: urlNumber });
+        databaseWorker.cuDatabase(req.body.url, (data) => {
+          if (data) {
+            console.log(data);
+            res.json(data);
+          } else {
+            console.log('Problem with databaseWorker');
+          }
+        });
       }
     });
   } else {
-    res.json({ error: 'invalid URL' });
+    res.json({ error: 'invalid URL 1' });
   }
 });
 
